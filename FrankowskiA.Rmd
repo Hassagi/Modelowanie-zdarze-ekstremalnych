@@ -27,7 +27,7 @@ library(fExtremes)
 coord233_alt <- read.csv("coord233_alt.csv", header = TRUE)
 temp_st <- read.csv("MeteoParam_B00300S_2018-01.csv", header = TRUE)
 
-path_to_files <- "C:/Users/Hasanga/Desktop/UG Modelowanie Matematyczne/Modelowanie zdarzeń ekstremalnych w R/Projekt 1/temp.stations-all"
+path_to_files <- "Podaj scieżkę"
 L <- as.list(list.files(path=path_to_files))
 L <- paste0(path_to_files,"\\",L)
 data0 <- lapply(L,read.csv)
