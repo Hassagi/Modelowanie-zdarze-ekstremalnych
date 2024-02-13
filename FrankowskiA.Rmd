@@ -1,0 +1,782 @@
+
+# Stacja
+```{r}
+# Stacja: SWIERADOW-ZDROJ
+# Kod stacji: 
+code <- 'X250150090'
+```
+
+# LateX
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Potrzebne biblioteki
+```{r}
+library(maps)
+library(fitdistrplus)
+library(gamlss)
+library(tidyr)
+library(evir)
+library(ismev)
+library(fExtremes)
+```
+
+# Wczytanie danych
+```{r}
+coord233_alt <- read.csv("coord233_alt.csv", header = TRUE)
+temp_st <- read.csv("MeteoParam_B00300S_2018-01.csv", header = TRUE)
+
+path_to_files <- "C:/Users/Hasanga/Desktop/UG Modelowanie Matematyczne/Modelowanie zdarzeń ekstremalnych w R/Projekt 1/temp.stations-all"
+L <- as.list(list.files(path=path_to_files))
+L <- paste0(path_to_files,"\\",L)
+data0 <- lapply(L,read.csv)
+```
+
+# Mapa
+```{r}
+SWIERADOW_ZDROJ <- coord233_alt[coord233_alt$place=="SWIERADOW-ZDROJ",]; SWIERADOW_ZDROJ
+
+poland <- map('world', 'poland', fill = T, col = 'gray')
+points(SWIERADOW_ZDROJ[c("lon", "lat")], pch = 19, col = 2)
+```
+
+# Sprawdzenie danych
+
+# Rok
+```{r}
+# Ilość brakujących danych
+n <- length(data0)
+suma <- 0
+for (i in 1:n) {
+  suma = suma + sum(is.na(data0[[i]]$X250150090))
+  
+}
+suma;n
+```
+
+#maksima 10-minutowe roczne
+```{r}
+max10 <- c()
+datetime <- c()
+
+for(i in 1:n){
+  max10 <- c(max10,data0[[i]]$X250150090)
+  datetime <- c(datetime,as.character(data0[[i]]$datetime))
+}
+```
+
+#maksima 10-minutowe lato
+```{r}
+lato <- c(6,   7,   8, 18,  19,  20, 30,  31,  32, 42,  43,  44,54,  55,  56, 66,  67,  68, 78,  79,  80,90,  91,  92,102, 103, 104, 114, 115, 116, 126, 127, 128)
+n1 <- length(lato)
+
+max10_lato <- c()
+datetime_lato <- c()
+
+for(i in 1:n1){
+  max10_lato <- c(max10_lato,data0[[lato[i]]]$X250150090)
+  datetime_lato <- c(datetime_lato,as.character(data0[[lato[i]]]$datetime))
+}
+
+hist(max10_lato)
+datetime_lato <- datetime_lato[!is.na(max10_lato)]
+max10_lato <- max10_lato[!is.na(max10_lato)]
+length(max10_lato)
+length(datetime_lato)
+sum(is.na(max10_lato))
+```
+
+#maksima 10-minutowe jesień
+```{r}
+jesień <- c(9,  10,  11,  21,  22,  23,  33,  34,  35,  45,  46,  47,  57,  58,  59,  69,  70,  71,  81,  82,  83,  93,  94,  95, 105, 106, 107, 117, 118, 119, 129, 130, 131)
+n2 <- length(jesień)
+
+max10_jesień <- c()
+datetime_jesień <- c()
+
+for(i in 1:n2){
+  max10_jesień <- c(max10_jesień,data0[[jesień[i]]]$X250150090)
+  datetime_jesień <- c(datetime_jesień,as.character(data0[[jesień[i]]]$datetime))
+}
+
+hist(max10_jesień)
+
+# usuwanie nierealistycznych danych
+
+length(max10_jesień)
+datetime_jesień <- datetime_jesień[max10_jesień > -15]
+max10_jesień <- max10_jesień[max10_jesień > -15]
+length(max10_jesień)
+length(datetime_jesień)
+datetime_jesień <- datetime_jesień[!is.na(max10_jesień)]
+max10_jesień <- max10_jesień[!is.na(max10_jesień)]
+length(max10_jesień)
+length(datetime_jesień)
+hist(max10_jesień)
+sum(is.na(max10_jesień))
+```
+
+#maksima 10-minutowe zima
+```{r}
+zima <- c(12,   1,   2,  24,  13,  14,  36,  25,  26,  48,  37,  38,  60,  49,  50,  72,  61,  62,  84, 73,  74,  96,  85,  86, 108,  97,  98, 120, 109, 110, 132, 121, 122)
+n3 <- length(zima)
+
+max10_zima <- c()
+datetime_zima <- c()
+
+for(i in 1:n3){
+  max10_zima <- c(max10_zima,data0[[zima[i]]]$X250150090)
+  datetime_zima <- c(datetime_zima,as.character(data0[[zima[i]]]$datetime))
+}
+
+hist(max10_zima)
+
+# usuwanie nierealistycznych danych
+
+length(max10_zima)
+datetime_zima <- datetime_zima[max10_zima > -30]
+max10_zima <- max10_zima[max10_zima > -30]
+length(max10_zima)
+length(datetime_zima)
+datetime_zima <- datetime_zima[!is.na(max10_zima)]
+max10_zima <- max10_zima[!is.na(max10_zima)]
+length(max10_zima)
+length(datetime_zima)
+hist(max10_zima)
+```
+#maksima 10-minutowe wiosna
+```{r}
+wiosna <- c(3,   4,   5,  15,  16,  17,  27,  28,  29,  39,  40,  41,  51,  52,  53,  63,  64,  65,  75,  76,  77,  87,  88,  89,  99, 100, 101, 111, 112, 113, 123, 124, 125)
+n4 <- length(wiosna)
+
+max10_wiosna <- c()
+datetime_wiosna <- c()
+
+for(i in 1:n4){
+  max10_wiosna <- c(max10_wiosna,data0[[wiosna[i]]]$X250150090)
+  datetime_wiosna <- c(datetime_wiosna,as.character(data0[[wiosna[i]]]$datetime))
+}
+
+length(max10_wiosna)
+length(datetime_wiosna)
+datetime_wiosna <- datetime_wiosna[!is.na(max10_wiosna)]
+max10_wiosna <- max10_wiosna[!is.na(max10_wiosna)]
+length(max10_wiosna)
+length(datetime_wiosna)
+hist(max10_wiosna)
+sum(is.na(max10_wiosna))
+```
+
+#maksima 10-minutowe roczne
+```{r}
+max10 <- c()
+datetime <- c()
+max10 <- c(max10_lato, max10_jesień, max10_zima, max10_wiosna)
+datetime <- c(datetime_lato, datetime_jesień, datetime_zima, datetime_wiosna)
+length(max10)
+length(datetime)
+max10 <- max10[order(as.Date(max10$datetime , format="%Y-%m-%d")),]
+```
+
+
+# Ilość danych
+```{r}
+length(max10)
+hist(max10)
+pom <- max10[max10 > -30]
+sum(max10 > -30, na.rm=TRUE)
+hist(pom, main = "Histogram temperatur", xlab = "Temperatura (C°)", ylab = "Częstotliwość")
+min(pom, na.rm = T)
+summary(pom)
+sd(pom, na.rm = T)
+```
+
+
+
+# Zapisanie w formacie Date roczne
+```{r}
+max10 <- data.frame(date=as.Date(datetime),max10=max10)
+
+rownames(max10) <- c()
+
+max10 <- separate(max10,date,c("year","mth","day"), convert=TRUE)
+
+max10 <- data.frame(datetime=datetime,max10)
+```
+
+# Zapisanie w formacie Date lato
+```{r}
+max10_lato_date <- data.frame(date=as.Date(datetime_lato),max10_lato=max10_lato)
+
+rownames(max10_lato) <- c()
+
+max10_lato_date <- separate(max10_lato_date,date,c("year","mth","day"), convert=TRUE)
+
+max10_lato_date <- data.frame(datetime_lato=datetime_lato,max10_lato)
+```
+
+# Zapisanie w formacie Date jesień
+```{r}
+max10_jesień_date <- data.frame(date=as.Date(datetime_jesień),max10_jesień=max10_jesień)
+
+rownames(max10_jesień) <- c()
+
+max10_jesień_date <- separate(max10_jesień_date,date,c("year","mth","day"), convert=TRUE)
+
+max10_jesień_date <- data.frame(datetime_jesień=datetime_jesień,max10_jesień)
+```
+
+# Zapisanie w formacie Date zima
+```{r}
+max10_zima_date <- data.frame(date=as.Date(datetime_zima),max10_zima=max10_zima)
+
+rownames(max10_zima) <- c()
+
+max10_zima_date <- separate(max10_zima_date,date,c("year","mth","day"), convert=TRUE)
+
+max10_zima_date <- data.frame(datetime_zima=datetime_zima,max10_zima)
+```
+
+
+# Zapisanie w formacie Date wiosna
+```{r}
+max10_wiosna_date <- data.frame(date=as.Date(datetime_wiosna),max10_wiosna=max10_wiosna)
+
+rownames(max10_wiosna) <- c()
+
+max10_wiosna_date <- separate(max10_wiosna_date,date,c("year","mth","day"), convert=TRUE)
+
+max10_wiosna_date <- data.frame(datetime_wiosna=datetime_wiosna,max10_wiosna)
+```
+
+
+# Dopasowanie najlepszego rozkładu lato
+
+```{r}
+fit_lato <- fitDist(max10_lato_date$max10_lato,type="realline")
+
+fit_lato$family
+
+fit_lato$parameters
+```
+
+$$\textbf{Sinh-Arcsinh}\ SHASHo(\mu, \sigma, \nu, \tau) \\ Funkcja\ rozkładu\ Sinh-Arcsinh \ została\ opracowana\ w\ 2009\ roku\\ przez\ dwóch\ matematyków\ Chris'a\ Jones\ i\ Arthura\ Pewsey. \\ Funkcje\ gęstości\ prawdopodobieństwa\ tego\ rozkładu\ oznaczamy\ przez \\ f_Y(y|\mu, \sigma, \nu, \tau)=\frac{\tau c}{\sigma \sqrt{2 \pi} (1+z^2)^\frac{1}{2} exp(-\frac{1}{2}r^2) }$$
+
+
+# "SHASH"       "Sinh-Arcsinh"                                  lato
+# "SEP2"        "Skew Exponential Power type 2"                 jesień
+# "SEP4"        "skew exponential power type 4"                 zima
+# "SEP1"        "Skew exponential power (Azzalini type 1)"      wiosna
+# Parametry
+
+# Dopasowanie najlepszego rozkładu jesień
+
+```{r}
+fit_jesień <- fitDist(max10_jesień_date$max10_jesień,type="realline")
+
+fit_jesień$family
+
+fit_jesień$parameters
+```
+
+# Dopasowanie najlepszego rozkładu zima
+
+```{r}
+fit_zima <- fitDist(max10_zima_date$max10_zima,type="realline")
+
+fit_zima$family
+
+fit_zima$parameters
+```
+
+# Dopasowanie najlepszego rozkładu wiosna
+
+```{r}
+fit_wiosna <- fitDist(max10_wiosna_date$max10_wiosna,type="realline")
+
+fit_wiosna$family
+
+fit_wiosna$parameters
+```
+
+```{r}
+mu <- fit$mu
+sigma <- fit$sigma
+nu <- fit$nu
+tau <- fit$tau
+```
+
+
+```{r}
+mu_lato <- fit_lato$mu
+sigma_lato <- fit_lato$sigma
+nu_lato <- fit_lato$nu
+tau_lato <- fit_lato$tau
+print(c(mu_lato, sigma_lato, nu_lato, tau_lato))
+
+```
+
+# analiza dobroci na wykresach 
+
+# histogram-gestosc
+
+```{r}
+hist(max10_lato_date$max10_lato, 
+     prob = TRUE, 
+     xlab = NA,
+     ylab = "gęstość",
+     main = "Histogram gęstości")
+curve(dSHASH(x,
+             mu_lato,
+             sigma_lato,
+             nu_lato,
+             tau_lato),
+      add=T,col=2)
+```
+
+# wykres kwantyl-kwantyl
+
+```{r}
+alpha=ppoints(100)
+
+kwantyle_teo_lato <- qSHASH(alpha,mu_lato,sigma_lato,nu_lato,tau_lato)
+kwantyle_emp_lato <- quantile(max10_lato_date$max10_lato,alpha,na.rm=TRUE)
+
+plot(kwantyle_emp_lato,kwantyle_teo_lato, 
+     main = "Q-Q plot", 
+     xlab = "kwantyle empiryczne", 
+     ylab = "kwantyle teoretyczne")
+abline(a=0,b=1,col=2)
+```
+
+#trzeba ponownie wyestymowac parametry rozkladu SHASH
+
+```{r}
+X <- as.numeric(na.omit(max10$max10))
+
+fSHASH <- fitdist(X, "SHASH", start =list(mu=mu,sigma=sigma,nu=nu,tau=tau))
+summary(fSHASH)
+#dev.off()
+#par(mfrow=c(1,1))
+plot(fSHASH) #to moze potrwac
+```
+
+# wykres dystrybuanta emp.-teo.
+
+```{r}
+plot(ecdf(max10_lato_date $max10_lato), main = "Wykres dystrybuanty empirycznej i teoretycznej")
+curve(pSHASH(x,mu_lato,sigma_lato,nu_lato,tau_lato), xlim=c(-10,35),col=2,add=TRUE)
+```
+
+# Poziomy zwrotu lato
+
+```{r}
+k1 = 20*92*24*6
+k2 = 50*92*24*6
+x20 = qSHASH(1-1/k1, mu = mu_lato, sigma = sigma_lato, nu = nu_lato, tau = tau_lato)
+x50 = qSHASH(1-1/k2, mu = mu_lato, sigma = sigma_lato, nu = nu_lato, tau = tau_lato)
+x20
+x50
+```
+# Potrzebne biblioteki
+```{r}
+library(maps)
+library(fitdistrplus)
+library(gamlss)
+library(tidyr)
+library(evir)
+library(ismev)
+library(fExtremes)
+```
+
+# GEV
+```{r}
+  
+data <- max10$max10
+time <- c()
+time <- as.POSIXct(max10$datetime)
+attr(x = data, which = "times") <- time
+
+
+#dla uproszczenia przyjmijmy ze w kazdym miesiacu jest  6*24*30 obserwacji
+b <- 6*24*30
+fit1 <- evir::gev(data,"year")  
+fit1
+
+#parametry rozkladu GEV
+parGEV <- fit1$par.ests; parGEV
+
+xi <- parGEV[[1]]
+sigma <- parGEV[[2]]
+mu <- parGEV[[3]]
+
+#wyniki dla Leborka (porownaj z wynikami dla Twojej stacji)
+#       xi      sigma         mu 
+#-0.5817646  9.5194353 18.8392023 
+
+#maksima z blokow (w przyblizeniu miesieczne)
+Max <- fit1$data
+Max
+```
+
+Wykresy diagnostyczne
+
+```{r}
+
+hist(Max,prob=TRUE)
+curve(evir::dgev(x,xi,mu,sigma),col=2,add=TRUE)  #zwroc uwage na kolejnosc parametrow, moze byc inna w roznych bibliotekach
+
+plot(ecdf(Max))
+curve(evir::pgev(x,xi,mu,sigma),col=2,add=TRUE) 
+
+kwantyle.emp <- quantile(Max,ppoints(100))
+kwantyle.teo <- evir::qgev(ppoints(100),xi,mu,sigma)
+
+plot(kwantyle.emp,kwantyle.teo)
+abline(a=0,b=1,col=2)
+
+```
+
+
+Wykresy diagnostyczne z wykorzystaniem biblioteki ismev (ponownie musimy wyestymowac parametry w tej bibliotece).
+
+```{r  }
+
+fit2 <- ismev::gev.fit(Max)
+fit2$mle
+
+#wykresy diagnostyczne 
+ismev::gev.diag(fit2)
+
+
+```
+
+Dodatkowe wykresy diagnostyczne w bibliotece fExtremes (też wymaga to estymacji parametrów w tej bibliotece).
+
+```{r}
+fit3 <- fExtremes::gevFit(data,b)
+fit3
+
+#wykresy diagnostyczne - inny pomysl opisany nizej
+summary(fit3)
+
+```
+
+
+#Fakt. 
+Jeśli zmienna losowa $X$ ma rozkład $GEV(\mu,\sigma,\xi)$, to zmienna $f(Y)$ ma rozkład wykładniczy $\mbox{Exp}(1)$, gdzie $f$ jest funkcją, która zależy od parametrów $\mu, \sigma, \beta$.
+
+Powyższy fakt wykorzystuje się do tworzenia wykresów diagnostycznych w oparciu o przekształconą  próbkę danych. Załóżmy, że na podstawie maksimów $m_1, m_2, \ldots, m_k$
+  wyestymowaliśmy parametry rozkładu $GEV(\mu,\sigma,\xi)$. Przekształcamy wejściowe dane 
+$$f(m_1), f(m_2), \ldots, f(m_k)$$
+  i konfrontujemy je na wykresach diagnostycznych z rozkładem wykładniczym z parametrem 1 (w pakiecie \texttt{fExtremes} mamy wykresy diagnostyczne właśnie dla przekształconej próby).
+
+
+#Przykład 2 c.d.
+Poziom zwrotu 20 i 50 letni - w bibliotekach evir i fExtremes
+
+```{r}
+#Srodkowa z trzech warosci (zewnetrzne to konce przedzialu ufnosci)
+evir::rlevel.gev(fit1, k.blocks = 20)
+evir::rlevel.gev(fit1, k.blocks = 50)
+
+fExtremes::gevrlevelPlot(fit3,20)
+fExtremes::gevrlevelPlot(fit3,50)
+
+```
+
+```{r}
+Max
+plot(x = sort(unique(max10$year)),
+     y = Max, 
+     main = "Maksima roczne", 
+     xlab = "Rok", 
+     ylab = "Temperatura (°C)",
+     type = "h",
+     col = "deepskyblue3",
+     lwd = 3)
+```
+
+```{r}
+summary(Max)
+```
+
+# Lato
+```{r}
+data_lato <- max10_lato_date$max10_lato
+time_lato <- c()
+time_lato <- as.POSIXct(max10_lato_date$datetime_lato)
+attr(x = data_lato, which = "times") <- time_lato
+
+fit1_lato <- evir::gev(data_lato,"year")  
+fit1_lato
+
+#parametry rozkladu GEV
+parGEV_lato <- fit1_lato$par.ests; parGEV_lato
+
+xi_lato <- parGEV_lato[[1]]
+sigma_lato <- parGEV_lato[[2]]
+mu_lato <- parGEV_lato[[3]]
+
+
+#maksima z blokow (w przyblizeniu miesieczne)
+Max_lato <- fit1_lato$data
+Max_lato
+
+evir::rlevel.gev(fit1_lato, k.blocks = 20)
+evir::rlevel.gev(fit1_lato, k.blocks = 50)
+```
+
+```{r}
+Max_lato
+plot(x = sort(unique(max10$year)),
+     y = Max_lato, 
+     main = "Maksima roczne", 
+     xlab = "Rok", 
+     ylab = "Temperatura (°C)",
+     type = "h",
+     col = "deepskyblue3",
+     lwd = 3)
+```
+# Jesień
+```{r}
+data_jesień <- max10_jesień_date$max10_jesień
+time_jesień <- c()
+time_jesień <- as.POSIXct(max10_jesień_date$datetime_jesień)
+attr(x = data_jesień, which = "times") <- time_jesień
+
+fit1_jesień <- evir::gev(data_jesień,"year")  
+fit1_jesień
+
+#parametry rozkladu GEV
+parGEV_jesień <- fit1_jesień$par.ests; parGEV_jesień
+
+xi_jesień <- parGEV_jesień[[1]]
+sigma_jesień <- parGEV_jesień[[2]]
+mu_jesień <- parGEV_jesień[[3]]
+
+
+#maksima z blokow (w przyblizeniu miesieczne)
+Max_jesień <- fit1_jesień$data
+Max_jesień
+
+evir::rlevel.gev(fit1_jesień, k.blocks = 20)
+evir::rlevel.gev(fit1_jesień, k.blocks = 50)
+```
+
+# Wiosna
+```{r}
+data_wiosna <- max10_wiosna_date$max10_wiosna
+time_wiosna <- c()
+time_wiosna <- as.POSIXct(max10_wiosna_date$datetime_wiosna)
+attr(x = data_wiosna, which = "times") <- time_wiosna
+
+fit1_wiosna <- evir::gev(data_wiosna,"year")  
+fit1_wiosna
+
+#parametry rozkladu GEV
+parGEV_wiosna <- fit1_wiosna$par.ests; parGEV_wiosna
+
+xi_wiosna <- parGEV_wiosna[[1]]
+sigma_wiosna <- parGEV_wiosna[[2]]
+mu_wiosna <- parGEV_wiosna[[3]]
+
+
+#maksima z blokow (w przyblizeniu miesieczne)
+Max_wiosna <- fit1_wiosna$data
+Max_wiosna
+
+evir::rlevel.gev(fit1_wiosna, k.blocks = 20)
+evir::rlevel.gev(fit1_wiosna, k.blocks = 50)
+```
+
+# Zima
+```{r}
+data_zima <- max10_zima_date$max10_zima
+time_zima <- c()
+time_zima <- as.POSIXct(max10_zima_date$datetime_zima)
+attr(x = data_zima, which = "times") <- time_zima
+
+fit1_zima <- evir::gev(data_zima,"year")  
+fit1_zima
+
+#parametry rozkladu GEV
+parGEV_zima <- fit1_zima$par.ests; parGEV_zima
+
+xi_zima <- parGEV_zima[[1]]
+sigma_zima <- parGEV_zima[[2]]
+mu_zima <- parGEV_zima[[3]]
+
+
+#maksima z blokow (w przyblizeniu miesieczne)
+Max_zima <- fit1_zima$data
+Max_zima
+
+evir::rlevel.gev(fit1_zima, k.blocks = 20)
+evir::rlevel.gev(fit1_zima, k.blocks = 50)
+```
+
+# Potrzebne biblioteki
+```{r}
+library(maps)
+library(fitdistrplus)
+library(gamlss)
+library(tidyr)
+library(evir)
+library(ismev)
+library(fExtremes)
+```
+
+# Rozkład GPD_lato
+```{r}
+X_lato = max10_lato
+plot(X_lato, type = "h", main = "Histogram temperatur letnich", xlab = "Ilość pomiarów", ylab = "Temperatura (°C)")
+u_lato = 27 # próg = 27°C
+abline(h=u_lato,lwd=2,col='red')
+#nadwyzki nad prog u
+Y_lato=X_lato[X_lato>u_lato]-u_lato
+plot(Y_lato, type='h', main = "Histogram nadwyżek", xlab = "Ilość pomiarów", ylab = "Temperatura (°C)")
+# Procent wybranych danych
+length(Y_lato)/length(X_lato)*100
+```
+
+#estymujemy parametry rozkladu GPD
+```{r}
+#gpd(dane,u) - podajemy prog lub liczbe nadwyzek
+fitGPD_lato=ismev::gpd.fit(X_lato,u_lato)
+xi_lato=fitGPD_lato$mle[[2]]
+beta_lato=fitGPD_lato$mle[[1]]
+xi_lato; beta_lato
+```
+
+#dobroc dopasowania  na wykresach 
+```{r}
+hist(Y_lato,prob=TRUE)                            #histogram nadwyżek
+curve(evir::dgpd(x,xi_lato,0,beta_lato),col='red',lwd=2,add=T) #gęstość rozkładu GPD
+
+qqplot(Y_lato,evir::qgpd(ppoints(1000),xi_lato,0,beta_lato))   #QQ-ploty
+abline(a=0,b=1,col=2)
+```
+```{r}
+#lub korzystamy z funkcji 
+ismev::gpd.diag(fitGPD_lato)
+```
+
+# Poziomy zwrotu
+```{r}
+fitGPD_lato_evir=gpd(X_lato,u_lato)
+
+# x_20
+evir::riskmeasures(fitGPD_lato_evir,0.95)[2]
+
+# x_50
+evir::riskmeasures(fitGPD_lato_evir,0.98)[2]
+```
+
+# Inna metoda
+```{r}
+Nu_lato=length(Y_lato)   #licznosc nadwyzek
+N_lato=length(X_lato)    #licznosc probki
+
+k=20
+x20_lato=u_lato+((k*Nu_lato/N_lato)^xi_lato-1)*beta_lato/xi_lato #jesli przyjmiemy, ze xi rozne od zera 
+x20Gumbel_lato=u_lato+beta_lato*log(k*Nu_lato/N_lato)  #jesli zdecydujemy,  ze to jednak Gumbel
+x20_lato#; x20Gumbel_lato
+
+k=50
+x50_lato=u_lato+((k*Nu_lato/N_lato)^xi_lato-1)*beta_lato/xi_lato #jesli przyjmiemy, ze xi rozne od zera 
+x50Gumbel_lato=u_lato+beta_lato*log(k*Nu_lato/N_lato)  #jesli zdecydujemy,  ze to jednak Gumbel
+x50_lato#; x20Gumbel_lato
+```
+
+# Rozkład GPD_jesień
+```{r}
+X_jesień = max10_jesień
+plot(X_jesień, type = "h", main = "Histogram temperatur", xlab = "Ilość pomiarów", ylab = "Temperatura (°C)")
+u_jesień = 18 # próg = 18°C
+abline(h=u_jesień,lwd=2,col='red')
+#nadwyzki nad prog u
+Y_jesień=X_jesień[X_jesień>u_jesień]-u_jesień
+plot(Y_jesień, type='h', main = "Histogram nadwyżek", xlab = "Ilość pomiarów", ylab = "Temperatura (°C)")
+# Procent wybranych danych
+length(Y_jesień)/length(X_jesień)*100
+
+#estymujemy parametry rozkladu GPD
+
+#gpd(dane,u) - podajemy prog lub liczbe nadwyzek
+fitGPD_jesień=ismev::gpd.fit(X_jesień,u_jesień)
+xi_jesień=fitGPD_jesień$mle[[2]]
+beta_jesień=fitGPD_jesień$mle[[1]]
+xi_jesień; beta_jesień
+
+# Poziomy zwrotu
+fitGPD_jesień_evir=gpd(X_jesień,u_jesień)
+
+# x_20
+evir::riskmeasures(fitGPD_jesień_evir,0.95)[2]
+
+# x_50
+evir::riskmeasures(fitGPD_jesień_evir,0.98)[2]
+```
+
+# Rozkład GPD_zima
+```{r}
+X_zima = max10_zima
+plot(X_zima, type = "h", main = "Histogram temperatur", xlab = "Ilość pomiarów", ylab = "Temperatura (°C)")
+u_zima = 5 # próg = 5°C
+abline(h=u_zima,lwd=2,col='red')
+#nadwyzki nad prog u
+Y_zima=X_zima[X_zima>u_zima]-u_zima
+plot(Y_zima, type='h', main = "Histogram nadwyżek", xlab = "Ilość pomiarów", ylab = "Temperatura (°C)")
+# Procent wybranych danych
+length(Y_zima)/length(X_zima)*100
+
+#estymujemy parametry rozkladu GPD
+
+#gpd(dane,u) - podajemy prog lub liczbe nadwyzek
+fitGPD_zima=ismev::gpd.fit(X_zima,u_zima)
+xi_zima=fitGPD_zima$mle[[2]]
+beta_zima=fitGPD_zima$mle[[1]]
+xi_zima; beta_zima
+
+# Poziomy zwrotu
+fitGPD_zima_evir=gpd(X_zima,u_zima)
+
+# x_20
+evir::riskmeasures(fitGPD_zima_evir,0.95)[2]
+
+# x_50
+evir::riskmeasures(fitGPD_zima_evir,0.98)[2]
+```
+
+# Rozkład GPD_wiosna
+```{r}
+X_wiosna = max10_wiosna
+plot(X_wiosna, type = "h", main = "Histogram temperatur", xlab = "Ilość pomiarów", ylab = "Temperatura (°C)")
+u_wiosna = 18 # próg = 14°C
+abline(h=u_wiosna,lwd=2,col='red')
+#nadwyzki nad prog u
+Y_wiosna=X_wiosna[X_wiosna>u_wiosna]-u_wiosna
+plot(Y_wiosna, type='h', main = "Histogram nadwyżek", xlab = "Ilość pomiarów", ylab = "Temperatura (°C)")
+# Procent wybranych danych
+length(Y_wiosna)/length(X_wiosna)*100
+
+#estymujemy parametry rozkladu GPD
+
+#gpd(dane,u) - podajemy prog lub liczbe nadwyzek
+fitGPD_wiosna=ismev::gpd.fit(X_wiosna,u_wiosna)
+xi_wiosna=fitGPD_wiosna$mle[[2]]
+beta_wiosna=fitGPD_wiosna$mle[[1]]
+xi_wiosna; beta_wiosna
+
+# Poziomy zwrotu
+fitGPD_wiosna_evir=gpd(X_wiosna,u_wiosna)
+
+# x_20
+evir::riskmeasures(fitGPD_wiosna_evir,0.95)[2]
+
+# x_50
+evir::riskmeasures(fitGPD_wiosna_evir,0.98)[2]
+```
+
